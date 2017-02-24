@@ -5,6 +5,12 @@
 
 > See the main [project](https://download.github.io/suid/) for details.
 
+[![version](https://maven-badges.herokuapp.com/maven-central/ws.suid/suid-java/badge.png)](https://search.maven.org/#artifactdetails%7Cws.suid%7Csuid-java%7C0.12.0%7Cjar)
+[![license](https://img.shields.io/badge/license-CC--BY--4.0-blue.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![build status](https://api.travis-ci.org/Download/suid-java.svg?branch=master)](https://travis-ci.org/Download/suid-java)
+![mind BLOWN](https://img.shields.io/badge/mind-BLOWN-ff69b4.svg)
+
+
 ## Download
 * [suid-java-0.12.0.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0.jar.asc))
 * [suid-java-0.12.0-sources.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0-sources.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0-sources.jar.asc))
