@@ -30,10 +30,10 @@ import ws.suid.Suid;
 * [Get a Suid's underlying value](#get-a-suid-s-underlying-value)
 * [Convert a Suid to a Long](#convert-a-suid-to-a-long)
 * [Convert a Suid to a String](#convert-a-suid-to-a-string)
-* [Convert a List<Suid> to a List<Long>](#convert-a-list-suid-to-a-list-long)
-* [Convert a List<Suid> to a List<String>](#convert-a-list-suid-to-a-list-string)
-* [Convert a List<Long> to a List<Suid>](#convert-a-list-long-to-a-list-suid)
-* [Convert a List<String> to a List<Suid>](#convert-a-list-string-to-a-list-suid)
+* [Convert a Suid list to a Long list](#convert-a-suid-list-to-a-long-list)
+* [Convert a Suid list to a String List](#convert-a-suid-list-to-a-string-list)
+* [Convert a Long list to a Suid list](#convert-a-long-list-to-a-suid-list)
+* [Convert a String list to a Suid list](#convert-a-string-list-to-a-suid-list)
 
 ### Create a Suid from a long
 ```java
@@ -67,7 +67,7 @@ String val = id.toString();
 System.out.println(val); // 14she
 ```
 
-### Convert a List<Suid> to a List<Long>
+### Convert a Suid list to a Long list
 ```java
 List<Suid> ids = Arrays.asList(new Suid[]{new Suid(1903154), new Suid(1903155), new Suid(1903156)});
 System.out.println(ids);  // [14she, 14shf, 14shg]
@@ -75,7 +75,7 @@ List<Long> vals = Suid.toLong(ids);
 System.out.println(vals); // [1903154, 1903155, 1903156]
 ```
 
-### Convert a List<Suid> to a List<String>
+### Convert a Suid list to a String list
 ```java
 List<Suid> ids = Arrays.asList(new Suid[]{new Suid(1903154), new Suid(1903155), new Suid(1903156)});
 System.out.println(ids);  // [14she, 14shf, 14shg]
@@ -83,7 +83,7 @@ List<String> vals = Suid.toString(ids);
 System.out.println(vals); // [14she, 14shf, 14shg]
 ```
 
-### Convert a List<Long> to a List<Suid>
+### Convert a Long list to a Suid list
 ```java
 List<Long> vals = Arrays.asList(new Long[]{Long.valueOf(1903154), Long.valueOf(1903155), Long.valueOf(1903156)});
 System.out.println(vals); // [1903154, 1903155, 1903156]
@@ -91,7 +91,7 @@ List<Suid> ids = Suid.fromLong(vals);
 System.out.println(ids);  // [14she, 14shf, 14shg]
 ```
 
-### Convert a List<String> to a List<Suid>
+### Convert a String list to a Suid list
 ```java
 List<String> vals = Arrays.asList(new String[]{"14she", "14shf", "14shg"});
 System.out.println(vals); // [14she, 14shf, 14shg]
