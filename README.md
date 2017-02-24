@@ -1,138 +1,106 @@
-# suid-server-java v0.10.1
-**Suid-server implementation for the Java EE technology stack.**
-http://download.github.io/suid-server-java/
+# suid-java
+### Java implementation of Scoped Unique IDs
 
-Suids are distributed Service-Unique IDs that are short and sweet.<br>
-See the main [project](https://download.github.io/suid/) for details.
+**Suids are distributed, Scoped, Unique IDs that are short and sweet.**
+
+> See the main [project](https://download.github.io/suid/) for details.
 
 ## Download
-* [suid-server-java-0.10.1.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-server-java/0.10.1/suid-server-java-0.10.1.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-server-java/0.10.1/suid-server-java-0.10.1.jar.asc))
-* [suid-server-java-0.10.1-sources.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-server-java/0.10.1/suid-server-java-0.10.1-sources.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-server-java/0.10.1/suid-server-java-0.10.1-sources.jar.asc))
-* [suid-server-java-0.10.1-javadoc.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-server-java/0.10.1/suid-server-java-0.10.1-javadoc.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-server-java/0.10.1/suid-server-java-0.10.1-javadoc.jar.asc))
+* [suid-java-0.12.0.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0.jar.asc))
+* [suid-java-0.12.0-sources.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0-sources.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0-sources.jar.asc))
+* [suid-java-0.12.0-javadoc.jar](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0-javadoc.jar) ([signature](http://search.maven.org/remotecontent?filepath=ws/suid/suid-java/0.12.0/suid-java-0.12.0-javadoc.jar.asc))
 
 ## Maven coordinates:
 ```xml
 <dependency>
 	<groupId>ws.suid</groupId>
-	<artifactId>suid-server-java</artifactId>
-	<version>0.10.1</version>
+	<artifactId>suid-java</artifactId>
+	<version>0.12.0</version>
 </dependency>
 ```
+
+## Import
+```java
+import ws.suid.Suid;
+```
+
 ## Usage
-* [Create a database and user](#create-a-database-and-user)
-* [Create the suid table](#create-the-suid-table)
-* [Insert the first record in the new table](#insert-the-first-record-in-the-new-table)
-* [Configure a datasource](#configure-a-datasource)
-* [Add the jar to WEB-INF/lib](#add-the-jar-to-web-inf-lib)
-* [Add SuidRecord to persistence.xml](#add-suidrecord-to-persistence-xml)
-* [Optional: Add a servlet mapping to web.xml](#optional-add-a-servlet-mapping-to-web-xml)
+* [Create a Suid from a long](#create-a-suid-from-a-long)
+* [Create a Suid from a string](#create-a-suid-from-a-string)
+* [Get a Suid's underlying value](#get-a-suid-s-underlying-value)
+* [Convert a Suid to a Long](#convert-a-suid-to-a-long)
+* [Convert a Suid to a String](#convert-a-suid-to-a-string)
+* [Convert a List<Suid> to a List<Long>](#convert-a-list-suid-to-a-list-long)
+* [Convert a List<Suid> to a List<String>](#convert-a-list-suid-to-a-list-string)
+* [Convert a List<Long> to a List<Suid>](#convert-a-list-long-to-a-list-suid)
+* [Convert a List<String> to a List<Suid>](#convert-a-list-string-to-a-list-suid)
 
-### Create a database and user
-In the examples below we are assuming a MySQL database, but any database that supports
-JPA2 can be used.
-```sql
-CREATE SCHEMA IF NOT EXISTS `suiddb` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'username'@'hostname' IDENTIFIED BY 'password';
-GRANT ALL PRIVILEGES ON `suiddb`.* TO 'username'@'hostname';
+### Create a Suid from a long
+```java
+Suid id = new Suid(1903154L);
+System.out.println(id); // 14she
 ```
 
-### Create the suid table
-```sql
-CREATE TABLE IF NOT EXISTS suid (
-	block BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-	shard TINYINT NOT NULL
-);
+### Create a Suid from a string
+```java
+Suid id = new Suid("14she");
+System.out.println(id); // 14she
 ```
 
-### Insert the first record in the new table
-```sql
-INSERT INTO suid(shard) VALUES(0);
-```
-*Note*: This configures the shard ID as 0.<br>
-*See*: [Sharding](#sharding) | [Configure sharding](#configure-sharding)
-
-### Configure a datasource
-Using the tools for your preferred server, add a new DataSource that can connect to the database we just created. In the examples below we are configuring a MySQL database on JBoss/WildFly, but all
-database and EE vendors that support JPA2 can be used.
-
-#### Using JBoss CLI
-	jboss-cli -c "data-source add --name=MyDataSource --jndi-name=java:/jdbc/MyDataSource --driver-name=mysql --connection-url=jdbc:mysql://hostname:3306/suiddb --user-name=username --password=password"
-
-#### Using standalone.xml
-```xml
-<datasource jndi-name="java:/jdbc/MyDataSource" pool-name="MyDataSource" enabled="true" use-java-context="true" use-ccm="true">
-    <connection-url>jdbc:mysql://localhost:3306/suiddb</connection-url>
-    <driver>mysql</driver>
-    <pool><flush-strategy>IdleConnections</flush-strategy></pool>
-    <security>
-        <user-name>root</user-name>
-        <password>secret</password>
-    </security>
-    <validation>
-        <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
-        <background-validation>true</background-validation>
-        <background-validation-millis>60000</background-validation-millis>
-    </validation>
-</datasource>
+### Get a Suid's underlying value
+```java
+Suid id = new Suid("14she");
+System.out.println(id.longValue()); // 1903154
 ```
 
-### Add the jar to WEB-INF/lib
-If you build your webapp with Maven, add a dependency using the Maven coordinates mentioned above. Otherwise, copy `suid-server-java-0.10.1.jar` to your `WEB-INF/lib` folder.
-
-### Add SuidRecord to persistence.xml
-Suid-server-java uses JPA, so make sure JPA can find it by adding the `SuidRecord` class
-to your webapp's `persistence.xml`:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence"
-             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence
-             http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
-	<persistence-unit name="MyPersistenceUnit">
-		<description>JPA Persistence Unit.</description>
-		<jta-data-source>jdbc/MyDataSource</jta-data-source>
-		<exclude-unlisted-classes>false</exclude-unlisted-classes>
-		<class>ws.suid.SuidRecord</class>
-	</persistence-unit>
-</persistence>
+### Convert a Suid to a Long
+```java
+Suid id = new Suid("14she");
+Long val = id.toLong();
+System.out.println(val); // 1903154
 ```
-Note the `class` element. I always add `exclude-unlisted-classes` as well and set it
-to `false`, but this is not needed for suid-server-java.
 
-### Optional: Add a servlet mapping to web.xml
-Suid-server-java includes a servlet named `SuidServlet` that will register itself to listen
-for requests on url `/suid/suid.json`. If you want to map it to a different url (or otherwise override it's configuration) you can configure it in `web.xml` like you can with any other servlet. Use `servlet-name` = `ws.suid.SuidServlet` to *override* the default configuration, or a different servlet name to *augment* it.
-
-```xml
-<servlet-mapping>
-	<servlet-name>ws.suid.SuidServlet</servlet-name>
-	<url-pattern>/super-suid/suid.json</url-pattern>
-</servlet-mapping>
+### Convert a Suid to a String
+```java
+Suid id = new Suid("14she");
+String val = id.toString();
+System.out.println(val); // 14she
 ```
-In the example above we specified a matching servlet name, so this *overrides* the default configuration. SuidServlet will be listening to one url:
-* `/super-suid/suid.json` (overridden)
 
-```xml
-<servlet-mapping>
-	<servlet-name>SuperSuidServlet</servlet-name>
-	<url-pattern>/super-suid/suid.json</url-pattern>
-</servlet-mapping>
+### Convert a List<Suid> to a List<Long>
+```java
+List<Suid> ids = Arrays.asList(new Suid[]{new Suid(1903154), new Suid(1903155), new Suid(1903156)});
+System.out.println(ids);  // [14she, 14shf, 14shg]
+List<Long> vals = Suid.toLong(ids);
+System.out.println(vals); // [1903154, 1903155, 1903156]
 ```
-In this example we specified a different servlet name, so this *augments* the default configuration. SuidServlet will be listening to two urls:
-* `/suid/suid.json` (default)
-* `/super-suid/suid.json` (augmented)
 
+### Convert a List<Suid> to a List<String>
+```java
+List<Suid> ids = Arrays.asList(new Suid[]{new Suid(1903154), new Suid(1903155), new Suid(1903156)});
+System.out.println(ids);  // [14she, 14shf, 14shg]
+List<String> vals = Suid.toString(ids);
+System.out.println(vals); // [14she, 14shf, 14shg]
+```
 
-## Sharding
-To prevent a single point of failure, the total ID space for each domain is divided into 2 sections (called shards).
-This allows you to set up separate servers with their own databases to give out ID blocks in their own shard. This way there can be two different suid servers for a single domain, each with their own database, and they don't need to communicate at all. All you need to do is make sure that each server is configured with it's own shard ID, `0` or `1`.
+### Convert a List<Long> to a List<Suid>
+```java
+List<Long> vals = Arrays.asList(new Long[]{Long.valueOf(1903154), Long.valueOf(1903155), Long.valueOf(1903156)});
+System.out.println(vals); // [1903154, 1903155, 1903156]
+List<Suid> ids = Suid.fromLong(vals);
+System.out.println(ids);  // [14she, 14shf, 14shg]
+```
 
-### Configure sharding
-To configure the shard ID we insert the first record in the suid table manually. The shard id on the existing record is used when inserting new records so once the first record is there the server can figure out the rest by itself. If we don't insert a first record, the shard ID defaults to `0`.
-*SEE*: [Insert the first record in the new table](#insert-the-first-record-in-the-new-table)
+### Convert a List<String> to a List<Suid>
+```java
+List<String> vals = Arrays.asList(new String[]{"14she", "14shf", "14shg"});
+System.out.println(vals); // [14she, 14shf, 14shg]
+List<Suid> ids = Suid.fromString(vals);
+System.out.println(ids);  // [14she, 14shf, 14shg]
+```
 
 ## Copyright
-Copyright (c) 2015 by [Stijn de Witt](http://StijnDeWitt.com). Some rights reserved.
+Copyright (c) 2017 by [Stijn de Witt](http://stijndewitt.com). Some rights reserved.
 
 ## License
 Creative Commons Attribution 4.0 International (CC BY 4.0)

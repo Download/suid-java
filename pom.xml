@@ -1,25 +1,25 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ws.suid</groupId>
-	<artifactId>suid-server-java</artifactId>
-	<version>0.10.1</version>
-	<name>suid-server-java</name>
-	<description>Suid-server implementation for the Java EE technology stack.</description>
-	<url>https://download.github.io/suid-server-java</url>
+	<artifactId>suid-java</artifactId>
+	<version>0.12.0</version>
+	<name>suid-java</name>
+	<description>Java implementation of Scoped Unique IDs</description>
+	<url>https://github.com/download/suid-java</url>
 	<scm>
-		<url>git@github.com:download/suid-server-java.git</url>
-		<connection>scm:git:git@github.com:download/suid-server-java.git</connection>
-		<developerConnection>scm:git:git@github.com:download/suid-server-java.git</developerConnection>
+		<url>git@github.com:download/suid-java.git</url>
+		<connection>scm:git:git@github.com:download/suid-java.git</connection>
+		<developerConnection>scm:git:git@github.com:download/suid-java.git</developerConnection>
 	</scm>
 	<issueManagement>
-		<url>https://github.com/download/suid-server-java/issues</url>
+		<url>https://github.com/download/suid-java/issues</url>
 	</issueManagement>
 	<developers>
 		<developer>
 			<name>Stijn de Witt</name>
 			<email>StijnDeWitt@hotmail.com</email>
 			<organization></organization>
-			<organizationUrl>http://StijnDeWitt.com</organizationUrl>
+			<organizationUrl>http://stijndewitt.com</organizationUrl>
 		</developer>
 	</developers>
 	<licenses>
@@ -30,6 +30,10 @@
 	</licenses>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<junit.version>4.12</junit.version>
+		<junit.jupiter.version>5.0.0-M3</junit.jupiter.version>
+		<junit.vintage.version>${junit.version}.0-M3</junit.vintage.version>
+		<junit.platform.version>1.0.0-M3</junit.platform.version>		
 	</properties>
 	<build>
 		<resources>
@@ -72,6 +76,36 @@
 					</archive>
 				</configuration>
 			</plugin>
+			
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19.1</version>
+				<configuration>
+					<includes>
+						<include>**/Test*.java</include>
+						<include>**/*Test.java</include>
+						<include>**/*Tests.java</include>
+						<include>**/*TestCase.java</include>
+					</includes>
+				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.junit.platform</groupId>
+						<artifactId>junit-platform-surefire-provider</artifactId>
+						<version>${junit.platform.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>org.junit.jupiter</groupId>
+						<artifactId>junit-jupiter-engine</artifactId>
+						<version>${junit.jupiter.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>org.junit.vintage</groupId>
+						<artifactId>junit-vintage-engine</artifactId>
+						<version>${junit.vintage.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>			
 		</plugins>
 	</build>
 	<reporting>
@@ -163,12 +197,12 @@
 			<version>7.0</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
+		<!-- dependency>
 			<groupId>javax.ejb</groupId>
 			<artifactId>javax.ejb-api</artifactId>
 			<version>3.2</version>
 			<scope>provided</scope>
-		</dependency>
+		</dependency -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-annotations</artifactId>
@@ -181,5 +215,17 @@
 			<version>2.5.3</version>
 			<scope>provided</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			<version>${junit.jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>		
 	</dependencies>
 </project>

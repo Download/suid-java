@@ -2,6 +2,7 @@ package ws.suid;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.persistence.AttributeConverter;
@@ -20,32 +21,37 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 /**
- * Stores a 53-bit service-unique ID in a 64-bit long.
+ * Stores a 52-bit Scoped Unique ID in a 64-bit long.
  * 
  * <p>The bits are distributed over the 64-bit long as depicted below:</p>
  * 
  * <pre>
  *                     HIGH INT                                         LOW INT
- * ________________________________________________________________________________________________
- * |                                               |                                               |
- * | 0000 0000 | 000b bbbb | bbbb bbbb | bbbb bbbb | bbbb bbbb | bbbb bbbb | bbbb bbbb | biii iiis |
- * |_______________________________________________|_______________________________________________|
+ * __________________________________________________________________________________________
+ * |                                           ||                                           |
+ * | 0000 0000  0000 bbbb  bbbb bbbb  bbbb bbbb  bbbb bbbb  bbbb bbbb  bbbb bbbb  bbbb iiii |
+ * |___________________________________________||___________________________________________|
  * 
- *   0 = 11 reserved bits
- *   b = 46 block bits
- *   i = 6 ID bits
- *   s = 1 shard bit
+ *   0 = 12 reserved bits
+ *   b = 48 block bits
+ *   i = 4 ID bits
  * </pre>
  * 
- * <p>The first 11 bits are reserved and always set to {@code 0}. The next 46 bits are used for
- * the {@code block} number. These are handed out by a centralized server. Then there are 6 {@code ID}
- * bits which are to be filled in by the generator. The last bit is reserved for the {@code shard}
- * ID. To prevent a single point of failure, two separate hosts can be handing out ID's for a certain 
- * domain, each with their own {@code shard} ID (0 or 1).</p>
+ * <p>The first 12 bits are reserved and always set to 0. The next 48 bits are used for
+ * the block number. These are handed out by the server(s). The last 4 bits are used 
+ * as ID bits which are to be filled in by the client.</p>
  * 
- * <p>To make the String representation of {@code Suid}s both short and easily human-readable and 
- *   write-able, base-36 encoding is used. Using only lowercase makes suids easy for humans to read, 
- *   write and pronounce.</p>
+ * <p>To prevent a single point of failure, multiple separate hosts can be handing out block numbers
+ * for the same scope(s), by limiting the numbers they will generate. For example, to split the ID
+ * space for the block numbers into two shards, set both servers to add 2 for each new block number,
+ * setting one server to start numbering at 0 and the other server to start at 1. This can be done
+ * later easily and can also be extended to 4 or even more servers... As such, no bits are explicitly
+ * reserved for sharding; instead this should be arranged at the application level.</p>
+ * 
+ * <p>To make {@code Suid}s both short and easily human-readable and write-able, Suids are represented 
+ * as base-36 encoded strings by default. Using only lowercase makes suids easy for humans to read, 
+ * write and pronounce. This class comes with a `toString` method and Json adapter to make sure it is 
+ * always serialized to/from strings.</p>
  *  
  * @author Stijn de Witt [StijnDeWitt@hotmail.com]
  */
@@ -58,35 +64,27 @@ public final class Suid extends Number implements CharSequence, Comparable<Suid>
 	/** Alphabet used when converting suid to string */
 	public static final String ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 	/** Mask that singles out the reserved bits */
-	public static final long MASK_RESERVED =  0xffe0000000000000L;
+	public static final long MASK_RESERVED =  0xfff0000000000000L;
 	/** Mask that singles out the block bits */
-	public static final long MASK_BLOCK =     0x001fffffffffff80L;
+	public static final long MASK_BLOCK =     0x000ffffffffffff0L;
 	/** Mask that singles out the ID bits */
-	public static final long MASK_ID =        0x000000000000007eL;
-	/** Mask that singles out the shard bits */
-	public static final long MASK_SHARD =     0x0000000000000001L;
+	public static final long MASK_ID =        0x000000000000000fL;
 	/** Number of reserved bits */
-	public static final byte COUNT_RESERVED = 11;
+	public static final byte COUNT_RESERVED = 12;
 	/** Number of block bits */
-	public static final byte COUNT_BLOCK =    46;
+	public static final byte COUNT_BLOCK =    48;
 	/** Number of ID bits */
-	public static final byte COUNT_ID =       6;
-	/** Number of shard bits */
-	public static final byte COUNT_SHARD =    1;
+	public static final byte COUNT_ID =       4;
 	/** Offset of reserved bits within suid (from LSB) */
-	public static final byte OFFSET_RESERVED = COUNT_BLOCK + COUNT_ID + COUNT_SHARD;
+	public static final byte OFFSET_RESERVED = COUNT_BLOCK + COUNT_ID;
 	/** Offset of block bits within suid (from LSB) */
-	public static final byte OFFSET_BLOCK =    COUNT_ID + COUNT_SHARD;
+	public static final byte OFFSET_BLOCK =    COUNT_ID;
 	/** Offset of ID bits within suid (from LSB) */
-	public static final byte OFFSET_ID =       COUNT_SHARD;
-	/** Offset of shard bit within suid (from LSB) */
-	public static final byte OFFSET_SHARD =    0;
+	public static final byte OFFSET_ID =       0;
 	/** The number of blocks available. */
 	public static final long BLOCK_SIZE =      1 << COUNT_BLOCK;
 	/** The number of IDs available in each block. */
 	public static final long IDSIZE =          1 << COUNT_ID;
-	/** The number of shards available */
-	public static final long SHARDSIZE =       1 << COUNT_SHARD;
 
 	/** Converts Suid to/from it's database representation. */ 
 	@Converter(autoApply=true)
@@ -141,18 +139,13 @@ public final class Suid extends Number implements CharSequence, Comparable<Suid>
 	}
 
 	/**
-	 * Creates a suid based on the given {@code block}, {@code id} and {@code shard} constituent parts.
+	 * Creates a suid based on the given {@code block} and {@code id} constituent parts.
 	 * 
 	 * @param block The block bits for the suid, in a long.
 	 * @param id The id bits for the suid, in a byte.
-	 * @param shard The shard bit for the suid, in a byte.
 	 */
-	public Suid(long block, byte id, byte shard) {
-		this.value = ~MASK_RESERVED & ( 
-			(MASK_BLOCK & (block << OFFSET_BLOCK)) | 
-			(MASK_ID    & (id    << OFFSET_ID))    | 
-			(MASK_SHARD & (shard << OFFSET_SHARD))
-		);
+	public Suid(long block, byte id) {
+		this.value = ~MASK_RESERVED & ((MASK_BLOCK & (block << OFFSET_BLOCK)) | (MASK_ID & (id << OFFSET_ID)));
 	}
 
 	/**
@@ -175,10 +168,8 @@ public final class Suid extends Number implements CharSequence, Comparable<Suid>
 	/**
 	 * Returns this suid's underlying value.
 	 * 
-	 * <p>Suid's use a {@code long} as underlying value. Avoid using
-	 * {@code intValue} and {@code floatValue} as these perform
-	 * narrowing conversions. These methods are mainly there 
-	 * to satisfy the {@code Number} interface.</p>
+	 * <p>Suid's use a {@code long} as underlying value. Avoid using {@code intValue} 
+	 * and {@code floatValue} as these perform narrowing conversions.</p>
 	 */
 	@Override public long longValue() {
 		return value;
@@ -188,7 +179,7 @@ public final class Suid extends Number implements CharSequence, Comparable<Suid>
 	 * Use {@link #longValue()} instead.
 	 * 
 	 * <p>If you must have a floating point number, use {@code doubleValue} which can 
-	 * actually store all possible suids (they are limited to 53 bits for this purpose).</p>
+	 * actually store all possible suids (they are limited to 52 bits for this purpose).</p>
 	 */
 	@Override public float floatValue() {
 		return (float) value;
@@ -198,7 +189,7 @@ public final class Suid extends Number implements CharSequence, Comparable<Suid>
 	 * Returns the value of this Suid as a double.
 	 * 
 	 * <p>Although suids internally use {@code long}s to store the bits, since they
-	 * are limited to 53 bits, they can actually be represented as {@code double} as
+	 * are limited to 52 bits, they can actually be represented as {@code double} as
 	 * well without loss of precision.</p>
 	 */
 	@Override public double doubleValue() {
@@ -230,15 +221,6 @@ public final class Suid extends Number implements CharSequence, Comparable<Suid>
 	 */
 	public byte getId() {
 		return (byte) ((value & MASK_ID) >> OFFSET_ID);
-	}
-
-	/**
-	 * Gets the shard bits.
-	 * 
-	 * @return A byte with the shard number (always in range {@code 0 .. 1}).
-	 */
-	public byte getShard() {
-		return (byte) ((value & MASK_SHARD) >> OFFSET_SHARD);
 	}
 
 	/**
@@ -327,14 +309,66 @@ public final class Suid extends Number implements CharSequence, Comparable<Suid>
 	}
 	
 	/**
+	 * Converts the given list of {@code ids} to a list of strings.
+	 * 
+	 * @param ids The ids to convert, may be empty but not {@code null}.
+	 * @return The list of strings, may be empty but never {@code null}.
+	 */
+	public static List<String> toString(List<Suid> ids) {
+		List<String> results = new ArrayList<String>();
+		for (Suid id : ids) {results.add(id.toString());}
+		return results;
+	}
+	
+	/**
 	 * Converts the given list of {@code ids} to a list of Suids.
 	 * 
 	 * @param ids The ids to convert, may be empty but not {@code null}.
 	 * @return The list of Suids, may be empty but never {@code null}.
 	 */
-	public static List<Suid> valueOf(List<Long> ids) {
+	public static List<Suid> fromLong(List<Long> ids) {
 		List<Suid> results = new ArrayList<Suid>();
 		for (Long id : ids) {results.add(new Suid(id.longValue()));}
 		return results;
+	}
+	
+	/**
+	 * Converts the given list of {@code ids} to a list of Suids.
+	 * 
+	 * @param ids The ids to convert, may be empty but not {@code null}.
+	 * @return The list of Suids, may be empty but never {@code null}.
+	 */
+	public static List<Suid> fromString(List<String> ids) {
+		List<Suid> results = new ArrayList<Suid>();
+		for (String id : ids) {results.add(new Suid(id));}
+		return results;
+	}
+	
+	public static void main(String... args) {
+//		List<Suid> ids = Arrays.asList(new Suid[]{new Suid(1903154), new Suid(1903155), new Suid(1903156)});
+//		System.out.println(ids);  // [14she, 14shf, 14shg]
+//		List<Long> vals = Suid.toLong(ids);
+//		System.out.println(vals); // [1903154, 1903155, 1903156]
+		
+		//
+		
+//		List<Suid> ids = Arrays.asList(new Suid[]{new Suid(1903154), new Suid(1903155), new Suid(1903156)});
+//		System.out.println(ids);  // [14she, 14shf, 14shg]
+//		List<String> vals = Suid.toString(ids);
+//		System.out.println(vals); // [14she, 14shf, 14shg]
+
+		//
+		
+//		List<Long> vals = Arrays.asList(new Long[]{Long.valueOf(1903154), Long.valueOf(1903155), Long.valueOf(1903156)});
+//		System.out.println(vals); // [1903154, 1903155, 1903156]
+//		List<Suid> ids = Suid.fromLong(vals);
+//		System.out.println(ids);  // [14she, 14shf, 14shg]
+		
+		//
+		
+		List<String> vals = Arrays.asList(new String[]{"14she", "14shf", "14shg"});
+		System.out.println(vals); // [14she, 14shf, 14shg]
+		List<Suid> ids = Suid.fromString(vals);
+		System.out.println(ids);  // [14she, 14shf, 14shg]
 	}
 }
